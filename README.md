@@ -1,15 +1,13 @@
 # OpenAI API Proxy/Adapter
 
-A high-performance API proxy service for OpenAI that adds authentication, rate limiting, request validation, and response caching.
+A lightweight API proxy service for OpenAI that adds authentication and request validation.
 
 ## Features
 
 - **API Compatibility**: Drop-in replacement for OpenAI API with compatible endpoints
 - **Authentication**: Optional API key authentication for securing your proxy
-- **Rate Limiting**: Configurable rate limits per client
 - **Request Validation**: Validates all requests before sending to OpenAI
-- **Response Caching**: Caches responses to reduce API costs
-- **Metrics**: Built-in metrics endpoint for monitoring
+- **Metrics**: Basic metrics endpoint for monitoring
 - **Error Handling**: Improved error handling with sanitized messages
 - **Streaming Support**: Fully supports streaming responses for chat and completions
 - **Health Check**: Built-in health check endpoint for monitoring
@@ -79,9 +77,6 @@ The following environment variables can be used to configure the proxy:
 | `OPENAI_API_KEY` | Your OpenAI API key (required) | - |
 | `ENABLE_AUTH` | Enable API key authentication | `false` |
 | `API_KEY_SECRET` | API key for authentication when enabled | Random generated |
-| `RATE_LIMIT_REQUESTS` | Number of requests allowed per period | `100` |
-| `RATE_LIMIT_PERIOD` | Rate limit period in seconds | `3600` (1 hour) |
-| `CACHE_TTL` | Cache time-to-live in seconds | `300` (5 minutes) |
 | `PORT` | Port to run the server on | `8000` |
 
 ## Using the API

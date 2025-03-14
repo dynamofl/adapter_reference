@@ -15,9 +15,7 @@ from openai import OpenAI, APIError, RateLimitError, AuthenticationError
 import uvicorn
 import logging
 import secrets
-import asyncio
-from datetime import datetime, timedelta
-from functools import lru_cache
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -37,14 +35,11 @@ if not OPENAI_API_KEY:
 
 API_KEY_SECRET = os.getenv("API_KEY_SECRET", secrets.token_urlsafe(32))
 ENABLE_AUTH = os.getenv("ENABLE_AUTH", "false").lower() == "true"
-RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", "100"))
-RATE_LIMIT_PERIOD = int(os.getenv("RATE_LIMIT_PERIOD", "3600"))  # in seconds
-CACHE_TTL = int(os.getenv("CACHE_TTL", "300"))  # in seconds
 
 # Initialize FastAPI
 app = FastAPI(
     title="OpenAI API Proxy",
-    description="A proxy service for the OpenAI API that provides authentication, rate limiting, and caching",
+    description="A proxy service for the OpenAI API that provides authentication and input validation",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -62,15 +57,9 @@ app.add_middleware(
 # Define authentication
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
-# Rate limiting data structure
-rate_limit_data = {}
-
 # Initialize OpenAI client
 def get_openai_client():
     return OpenAI(api_key=OPENAI_API_KEY)
-
-# Cache for responses
-response_cache = {}
 
 # Middleware for request logging
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
@@ -94,51 +83,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         
         return response
 
-# Middleware for rate limiting
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: StarletteRequest, call_next):
-        if request.url.path.startswith("/v1/"):
-            # Get client identifier (IP or API key if available)
-            client_id = request.headers.get("X-API-Key", request.client.host)
-            
-            # Initialize rate limit data for this client if not exists
-            if client_id not in rate_limit_data:
-                rate_limit_data[client_id] = {
-                    "count": 0,
-                    "reset_time": datetime.now() + timedelta(seconds=RATE_LIMIT_PERIOD)
-                }
-            
-            # Check if rate limit period has expired
-            if datetime.now() > rate_limit_data[client_id]["reset_time"]:
-                rate_limit_data[client_id] = {
-                    "count": 0,
-                    "reset_time": datetime.now() + timedelta(seconds=RATE_LIMIT_PERIOD)
-                }
-            
-            # Increment counter
-            rate_limit_data[client_id]["count"] += 1
-            
-            # Check if rate limit exceeded
-            if rate_limit_data[client_id]["count"] > RATE_LIMIT_REQUESTS:
-                remaining = (rate_limit_data[client_id]["reset_time"] - datetime.now()).total_seconds()
-                return JSONResponse(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    content={"error": "Rate limit exceeded", "reset_in_seconds": int(remaining)}
-                )
-            
-            # Add rate limit headers
-            response = await call_next(request)
-            response.headers["X-Rate-Limit-Limit"] = str(RATE_LIMIT_REQUESTS)
-            response.headers["X-Rate-Limit-Remaining"] = str(RATE_LIMIT_REQUESTS - rate_limit_data[client_id]["count"])
-            response.headers["X-Rate-Limit-Reset"] = str(int(rate_limit_data[client_id]["reset_time"].timestamp()))
-            
-            return response
-        
-        return await call_next(request)
-
 # Add middleware
 app.add_middleware(RequestLoggingMiddleware)
-app.add_middleware(RateLimitMiddleware)
 
 # Authentication dependency
 async def get_api_key(
@@ -232,12 +178,7 @@ class CompletionRequest(BaseModel):
             raise ValueError("Prompt list cannot be empty")
         return v
 
-# Cache key generator
-def generate_cache_key(model: str, params: Dict[str, Any]) -> str:
-    # Create a stable string representation of parameters for caching
-    # Exclude non-deterministic parameters like user ids
-    cache_params = {k: v for k, v in params.items() if k not in ['user']}
-    return f"{model}:{json.dumps(cache_params, sort_keys=True)}"
+# Utils for error handling
 
 # Utils for sanitizing errors
 def get_error_details_and_status(error: Exception) -> tuple[Dict[str, Any], int]:
@@ -334,14 +275,6 @@ async def chat_completions(
 ):
     """Create a chat completion with the OpenAI API"""
     try:
-        # Check cache for non-streaming requests
-        if not request.stream:
-            cache_key = generate_cache_key(request.model, request.model_dump())
-            cached_response = response_cache.get(cache_key)
-            if cached_response:
-                logger.info(f"Cache hit for chat completion request: {x_request_id}")
-                return cached_response
-
         # Handle streaming responses
         if request.stream:
             return StreamingResponse(
@@ -372,12 +305,6 @@ async def chat_completions(
             user=request.user
         )
         
-        # Cache the response
-        response_cache[cache_key] = response
-        
-        # Schedule cache cleanup
-        asyncio.create_task(async_cache_cleanup(cache_key, CACHE_TTL))
-        
         return response
     
     except Exception as e:
@@ -387,13 +314,6 @@ async def chat_completions(
             status_code=status_code,
             detail=error_details
         )
-
-async def async_cache_cleanup(cache_key: str, ttl: int):
-    """Async task to remove cache entries after TTL expires"""
-    await asyncio.sleep(ttl)
-    if cache_key in response_cache:
-        del response_cache[cache_key]
-        logger.debug(f"Removed cache entry: {cache_key}")
 
 async def stream_chat_completions(request: ChatCompletionRequest):
     """Stream chat completions from the OpenAI API"""
@@ -440,24 +360,11 @@ async def embeddings(
 ):
     """Create embeddings with the OpenAI API"""
     try:
-        # Check cache
-        cache_key = generate_cache_key(request.model, request.model_dump())
-        cached_response = response_cache.get(cache_key)
-        if cached_response:
-            logger.info(f"Cache hit for embeddings request: {x_request_id}")
-            return cached_response
-
         response = client.embeddings.create(
             model=request.model,
             input=request.input,
             user=request.user
         )
-        
-        # Cache the response
-        response_cache[cache_key] = response
-        
-        # Schedule cache cleanup
-        asyncio.create_task(async_cache_cleanup(cache_key, CACHE_TTL))
         
         return response
     
@@ -478,14 +385,6 @@ async def completions(
 ):
     """Create completions with the OpenAI API"""
     try:
-        # Check cache for non-streaming requests
-        if not request.stream:
-            cache_key = generate_cache_key(request.model, request.model_dump())
-            cached_response = response_cache.get(cache_key)
-            if cached_response:
-                logger.info(f"Cache hit for completion request: {x_request_id}")
-                return cached_response
-
         # Handle streaming responses
         if request.stream:
             return StreamingResponse(
@@ -509,12 +408,6 @@ async def completions(
             frequency_penalty=request.frequency_penalty,
             user=request.user
         )
-        
-        # Cache the response
-        response_cache[cache_key] = response
-        
-        # Schedule cache cleanup
-        asyncio.create_task(async_cache_cleanup(cache_key, CACHE_TTL))
         
         return response
     
@@ -609,15 +502,9 @@ async def create_image(
 @app.get("/metrics", dependencies=[Depends(get_api_key)])
 async def metrics():
     """Provide metrics about API usage"""
-    total_requests = sum(client["count"] for client in rate_limit_data.values())
-    clients_count = len(rate_limit_data)
-    cache_size = len(response_cache)
-    
     return {
-        "total_requests": total_requests,
-        "clients_count": clients_count,
-        "cache_size": cache_size,
-        "uptime_seconds": time.time() - startup_time
+        "uptime_seconds": time.time() - startup_time,
+        "version": "1.0.0"
     }
 
 # Initialize startup time for uptime tracking
@@ -681,8 +568,6 @@ async def startup_event():
     """Initialize resources on application startup"""
     logger.info("Starting OpenAI API Proxy")
     logger.info(f"Authentication enabled: {ENABLE_AUTH}")
-    logger.info(f"Rate limiting: {RATE_LIMIT_REQUESTS} requests per {RATE_LIMIT_PERIOD} seconds")
-    logger.info(f"Response caching enabled with TTL: {CACHE_TTL} seconds")
     
     # Verify OpenAI API key on startup
     try:
@@ -697,10 +582,6 @@ async def startup_event():
 async def shutdown_event():
     """Clean up resources on application shutdown"""
     logger.info("Shutting down OpenAI API Proxy")
-    
-    # Clear caches and other resources
-    response_cache.clear()
-    rate_limit_data.clear()
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
