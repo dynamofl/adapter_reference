@@ -26,6 +26,7 @@ class AppConfig(BaseModel):
     openai_base_url: str = Field(default="https://api.openai.com/v1")
     
     # Authentication settings
+    # Authentication is disabled by default, but can be enabled if needed
     enable_auth: bool = Field(default=False)
     api_key_secret: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
     

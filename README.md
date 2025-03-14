@@ -85,14 +85,13 @@ The following environment variables can be used to configure the adapter:
 
 ## Using the API
 
-### Authentication
+### Making API Requests
 
-When authentication is enabled, include your API key in the header:
+You can make requests to the API without authentication:
 
 ```bash
 curl -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your_api_key_here" \
   -d '{
     "model": "gpt-3.5-turbo",
     "messages": [
@@ -104,15 +103,17 @@ curl -X POST http://localhost:8000/v1/chat/completions \
   }'
 ```
 
+Authentication is disabled by default but can be enabled by uncommenting the authentication code in `app.py` and setting `ENABLE_AUTH=true` in your `.env` file.
+
 ### Using with the OpenAI Python client
 
 ```python
 import openai
 
 client = openai.OpenAI(
-    # No API key needed when ENABLE_AUTH=false
     base_url="http://localhost:8000/v1",
-    # Include API key in header when ENABLE_AUTH=true
+    # No API key needed by default since authentication is disabled
+    # If you enable authentication, include your API key:
     # api_key="your_api_key_here"
 )
 
@@ -190,7 +191,7 @@ The examples directory contains a custom client implementation to demonstrate ho
 ## Health and Monitoring
 
 - Health check: `GET /health`
-- API metrics: `GET /metrics` (protected by API key when `ENABLE_AUTH=true`)
+- API metrics: `GET /metrics`
 
 ## Testing
 

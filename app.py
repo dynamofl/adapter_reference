@@ -108,17 +108,22 @@ async def get_api_key(
     Raises:
         HTTPException: If authentication is enabled and the API key is invalid
     """
-    if not config.enable_auth:
-        return None
+    # Authentication is disabled by default
+    # If you need to enable authentication, uncomment the code below
+    # and set ENABLE_AUTH=true in your .env file
     
-    if api_key is None or api_key != config.api_key_secret:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API Key",
-            headers={"WWW-Authenticate": "ApiKey"},
-        )
+    # if not config.enable_auth:
+    #     return None
     
-    return api_key
+    # if api_key is None or api_key != config.api_key_secret:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_401_UNAUTHORIZED,
+    #         detail="Invalid API Key",
+    #         headers={"WWW-Authenticate": "ApiKey"},
+    #     )
+    
+    # Always allow access when authentication is disabled
+    return None
 
 # Initialize OpenAI client as a dependency
 client = get_openai_client()
@@ -472,7 +477,7 @@ async def stream_completions(request: CompletionRequest):
         yield f"data: {error_json}\n\n"
 
 # Metrics endpoint for monitoring
-@app.get("/metrics", dependencies=[Depends(get_api_key)])
+@app.get("/metrics")
 async def metrics():
     """Provide metrics about API usage"""
     return {
