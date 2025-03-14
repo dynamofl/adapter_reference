@@ -1,6 +1,6 @@
-# OpenAI Adapter
+# OpenAI Adapter Reference
 
-A flexible API proxy service for OpenAI and other AI providers. This adapter provides authentication, error handling, request validation, and allows you to use OpenAI-compatible clients with other AI services.
+A reference implementation for building OpenAI API-compatible services. This adapter implements the OpenAI API interface and can be used as a starting point for creating custom implementations that maintain the same API but with different internal authentication, routing, or business logic.
 
 ## Features
 
@@ -134,76 +134,58 @@ completion_response = client.completions.create(
 print(completion_response.choices[0].text)
 ```
 
-## Creating Custom Adapters
+## Creating Custom Client Implementations
 
-The adapter is designed to be extended to work with different AI providers. Check the `examples/` directory for adapter examples:
+This reference implementation is designed to help you build services that expose the same API interface as OpenAI but with your own customized client implementation. Here's how to use it:
 
-### Anthropic Claude Adapter
+### Understanding the Architecture
 
-This adapter allows you to use the OpenAI client with Anthropic's Claude models.
+The reference implementation has three main components:
 
-1. Install the Anthropic Python SDK:
-```bash
-pip install anthropic
-```
+1. **API Endpoints**: FastAPI routes that expose OpenAI-compatible endpoints
+2. **Client Implementation**: The OpenAI client that handles actual API calls
+3. **Validation & Error Handling**: Logic that ensures requests and responses follow the OpenAI format
 
-2. Add your Anthropic API key to `.env`:
-```
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
-```
+### Customizing for Your Own Implementation
 
-3. Run the adapter:
-```bash
-python examples/anthropic_adapter.py
-```
+To create your own client implementation that maintains OpenAI API compatibility:
 
-Now you can use the OpenAI client with Claude models:
+1. **Fork this repo**: Use it as a starting point for your implementation
+2. **Replace the client**: Modify the `get_openai_client()` function in `app.py` to return your custom client
+3. **Customize authentication**: Update authentication as needed for your use case
+4. **Add business logic**: Insert any additional logic like request modification, logging, etc.
+
+Example custom client implementation:
 
 ```python
-import openai
+# In app.py
 
-client = openai.OpenAI(
-    base_url="http://localhost:8000/v1",
-)
-
-# This will actually use Claude even though you specify an OpenAI model name
-response = client.chat.completions.create(
-    model="gpt-4",  # Will be mapped to claude-3-opus-20240229
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "Explain quantum computing in simple terms."}
-    ]
-)
-print(response.choices[0].message.content)
+def get_openai_client():
+    """
+    Returns a custom OpenAI client implementation with the same interface
+    but different internal authentication and routing.
+    """
+    # Import your custom client implementation
+    from your_custom_module import CustomOpenAIClient
+    
+    # Return your custom client with the same interface
+    return CustomOpenAIClient(
+        api_key=config.openai_api_key,
+        # Add your custom parameters here
+        enterprise_id=config.enterprise_id,
+        custom_routing=config.custom_routing
+    )
 ```
 
-### Mistral AI Adapter
+### Example Use Cases
 
-This adapter allows you to use the OpenAI client with Mistral's models.
+1. **Enterprise Routing**: Route requests to different OpenAI deployments based on business rules
+2. **Custom Authentication**: Implement custom JWT, OAuth, or other auth schemes
+3. **Request Transformation**: Modify requests before sending to OpenAI (e.g., adding context)
+4. **Response Filtering**: Apply content filtering or modification to responses
+5. **Logging & Analytics**: Add detailed logging for compliance or usage tracking
 
-1. Install the Mistral Python SDK:
-```bash
-pip install mistralai
-```
-
-2. Add your Mistral API key to `.env`:
-```
-MISTRAL_API_KEY=your_mistral_api_key_here
-```
-
-3. Run the adapter:
-```bash
-python examples/mistral_adapter.py
-```
-
-### Creating Your Own Adapter
-
-To create your own adapter:
-
-1. Copy one of the example adapters as a starting point
-2. Update the configuration to connect to your API provider
-3. Create mappings between OpenAI request format and your provider's format
-4. Implement the endpoints needed for your use case
+The examples directory contains adapter implementations for different AI providers to demonstrate how to maintain the OpenAI API interface while using different backends.
 
 ## Health and Monitoring
 

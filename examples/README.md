@@ -1,8 +1,19 @@
-# Custom Adapter Examples
+# OpenAI Reference Implementation Examples
 
-This directory contains example adapters showing how to extend the OpenAI API Proxy to work with different AI providers.
+This directory contains examples showing how to extend or customize the OpenAI API reference implementation for different use cases.
 
-## Available Adapters
+## Available Examples
+
+### Custom Client Implementation
+
+The `custom_client_example.py` file demonstrates how to create a custom OpenAI client implementation that maintains the same interface as the standard OpenAI client but adds custom functionality:
+
+- Custom authentication mechanisms
+- Enterprise-specific routing logic
+- Request modification and enhancement
+- Custom logging and analytics
+
+This example shows how to replace the standard OpenAI client with your own implementation while maintaining API compatibility.
 
 ### Anthropic Claude Adapter
 
@@ -12,21 +23,21 @@ The `anthropic_adapter.py` example demonstrates how to create an OpenAI-compatib
 
 The `mistral_adapter.py` example shows how to create an adapter for Mistral's API, allowing you to use the OpenAI client with Mistral models.
 
-## Creating Your Own Adapter
+## Creating Your Own Client Implementation
 
-To create a custom adapter:
+To create a custom OpenAI client implementation:
 
-1. Start by copying one of the example adapters
-2. Update the configuration to include your API provider's settings
-3. Create mapping functions to convert between OpenAI format and your provider's format
-4. Implement the endpoints you need (usually just `/v1/chat/completions`)
+1. Review the `custom_client_example.py` as a starting point
+2. Implement the same interface as the official OpenAI client
+3. Add your custom authentication, routing, and business logic
+4. Replace the `get_openai_client()` function in `app.py` with your implementation
 
 ## Best Practices
 
-When creating an adapter, consider the following best practices:
+When customizing the OpenAI client implementation, consider these best practices:
 
-1. **Model Mapping**: Create a clear mapping between OpenAI model names and your provider's model names
-2. **Error Handling**: Convert your provider's error messages to OpenAI-compatible formats
-3. **Streaming Support**: Implement streaming properly to maintain compatibility
-4. **Authentication**: Reuse the authentication system from the base proxy
-5. **Documentation**: Document how to use your adapter, including any limitations or differences
+1. **Maintain Interface Compatibility**: Ensure your custom client has the same methods and parameters as the official client
+2. **Proper Error Handling**: Convert your custom errors to match OpenAI's error format
+3. **Streaming Support**: Implement streaming correctly to maintain compatibility
+4. **Authentication**: Implement your organization's authentication requirements
+5. **Documentation**: Document your custom client implementation thoroughly

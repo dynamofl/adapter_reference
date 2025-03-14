@@ -60,8 +60,9 @@ def get_openai_client():
     """
     Create an OpenAI client using the configured API key and base URL.
     
-    This allows for connecting to different OpenAI-compatible endpoints
-    by configuring the OPENAI_BASE_URL environment variable.
+    This creates a standard OpenAI client that connects to the actual OpenAI API.
+    When customers implement their own client with the same interface, they can
+    replace this with their own implementation while keeping the same API endpoints.
     """
     return OpenAI(
         api_key=config.openai_api_key,
