@@ -144,17 +144,7 @@ class ChatCompletionRequest(BaseModel):
             raise ValueError("At least one message is required")
         return v
 
-class EmbeddingsRequest(BaseModel):
-    model: str
-    input: Union[str, List[str]]
-    user: Optional[str] = None
-    
-    @field_validator('input')
-    @classmethod
-    def validate_input(cls, v):
-        if isinstance(v, list) and len(v) == 0:
-            raise ValueError("Input list cannot be empty")
-        return v
+# EmbeddingsRequest class removed (not supported)
 
 class CompletionRequest(BaseModel):
     model: str
@@ -251,20 +241,7 @@ async def root():
         "health": "/health"
     }
 
-# Model endpoints
-@app.get("/v1/models")
-async def list_models(api_key: str = Depends(get_api_key)):
-    """List available models from OpenAI"""
-    try:
-        response = client.models.list()
-        return response
-    except Exception as e:
-        error_details, status_code = get_error_details_and_status(e)
-        logger.error(f"Error listing models: {str(e)}")
-        raise HTTPException(
-            status_code=status_code,
-            detail=error_details
-        )
+# Models endpoint is not supported
 
 # Chat completions endpoint
 @app.post("/v1/chat/completions")
@@ -351,30 +328,7 @@ async def stream_chat_completions(request: ChatCompletionRequest):
         error_json = json.dumps(error_details)
         yield f"data: {error_json}\n\n"
 
-# Embeddings endpoint
-@app.post("/v1/embeddings")
-async def embeddings(
-    request: EmbeddingsRequest,
-    api_key: str = Depends(get_api_key),
-    x_request_id: Optional[str] = Header(None)
-):
-    """Create embeddings with the OpenAI API"""
-    try:
-        response = client.embeddings.create(
-            model=request.model,
-            input=request.input,
-            user=request.user
-        )
-        
-        return response
-    
-    except Exception as e:
-        error_details, status_code = get_error_details_and_status(e)
-        logger.error(f"Error in embeddings: {str(e)}")
-        raise HTTPException(
-            status_code=status_code,
-            detail=error_details
-        )
+# Embeddings endpoint is not supported
 
 # Completions endpoint
 @app.post("/v1/completions")
@@ -449,54 +403,7 @@ async def stream_completions(request: CompletionRequest):
         error_json = json.dumps(error_details)
         yield f"data: {error_json}\n\n"
 
-# Images API
-class ImageGenerationRequest(BaseModel):
-    prompt: str
-    n: Optional[int] = Field(1, ge=1, le=10)
-    size: Optional[str] = "1024x1024"
-    response_format: Optional[str] = "url"
-    user: Optional[str] = None
-    
-    @field_validator('size')
-    @classmethod
-    def validate_size(cls, v):
-        allowed_sizes = ["256x256", "512x512", "1024x1024", "1792x1024", "1024x1792"]
-        if v not in allowed_sizes:
-            raise ValueError(f"Size must be one of {allowed_sizes}")
-        return v
-    
-    @field_validator('response_format')
-    @classmethod
-    def validate_response_format(cls, v):
-        allowed_formats = ["url", "b64_json"]
-        if v not in allowed_formats:
-            raise ValueError(f"Response format must be one of {allowed_formats}")
-        return v
-
-@app.post("/v1/images/generations")
-async def create_image(
-    request: ImageGenerationRequest,
-    api_key: str = Depends(get_api_key)
-):
-    """Generate images with DALL-E"""
-    try:
-        response = client.images.generate(
-            prompt=request.prompt,
-            n=request.n,
-            size=request.size,
-            response_format=request.response_format,
-            user=request.user
-        )
-        
-        return response
-    
-    except Exception as e:
-        error_details, status_code = get_error_details_and_status(e)
-        logger.error(f"Error in image generation: {str(e)}")
-        raise HTTPException(
-            status_code=status_code,
-            detail=error_details
-        )
+# Images API is not supported
 
 # Metrics endpoint for monitoring
 @app.get("/metrics", dependencies=[Depends(get_api_key)])

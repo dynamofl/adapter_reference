@@ -73,6 +73,18 @@ def test_metrics_endpoint():
         print(json.dumps(response.json(), indent=2))
     return response.status_code == 200
 
+def test_unsupported_endpoint():
+    """Test that unsupported endpoints return appropriate errors"""
+    response = client.post(
+        "/v1/embeddings",
+        json={
+            "model": "text-embedding-ada-002",
+            "input": "Hello"
+        }
+    )
+    print(f"Unsupported endpoint status: {response.status_code}")
+    return response.status_code == 404  # Should return not found
+
 if __name__ == "__main__":
     print("Testing OpenAI Proxy API...")
     
@@ -99,6 +111,10 @@ if __name__ == "__main__":
     
     metrics_result = test_metrics_endpoint()
     print(f"Metrics test passed: {metrics_result}")
+    print("\n---\n")
+    
+    unsupported_result = test_unsupported_endpoint()
+    print(f"Unsupported endpoint test passed: {unsupported_result}")
     
     # Overall result
     all_passed = (
@@ -107,7 +123,8 @@ if __name__ == "__main__":
         validation_result and 
         role_validation_result and 
         auth_result and 
-        metrics_result
+        metrics_result and
+        unsupported_result
     )
     print("\n===\n")
     print(f"All tests passed: {all_passed}")

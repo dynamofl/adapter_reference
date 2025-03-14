@@ -1,10 +1,10 @@
 # OpenAI API Proxy/Adapter
 
-A lightweight API proxy service for OpenAI that adds authentication and request validation.
+A minimal API proxy service for OpenAI that focuses exclusively on text generation endpoints.
 
 ## Features
 
-- **API Compatibility**: Drop-in replacement for OpenAI API with compatible endpoints
+- **Focused API Compatibility**: Supports only the core text generation endpoints
 - **Authentication**: Optional API key authentication for securing your proxy
 - **Request Validation**: Validates all requests before sending to OpenAI
 - **Metrics**: Basic metrics endpoint for monitoring
@@ -16,9 +16,8 @@ A lightweight API proxy service for OpenAI that adds authentication and request 
 
 - `/v1/chat/completions` - Chat completions API
 - `/v1/completions` - Text completions API
-- `/v1/embeddings` - Embeddings API
-- `/v1/images/generations` - Image generation API
-- `/v1/models` - List available models
+
+Note: Other OpenAI endpoints like embeddings, image generation, and model listing are not supported in this focused adapter.
 
 ## Getting Started
 

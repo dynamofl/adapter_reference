@@ -55,21 +55,7 @@ MOCK_CHAT_COMPLETION_RESPONSE = {
     }
 }
 
-MOCK_EMBEDDINGS_RESPONSE = {
-    "object": "list",
-    "data": [
-        {
-            "object": "embedding",
-            "embedding": [0.1, 0.2, 0.3],
-            "index": 0
-        }
-    ],
-    "model": "text-embedding-ada-002",
-    "usage": {
-        "prompt_tokens": 5,
-        "total_tokens": 5
-    }
-}
+# Embeddings response removed (not supported)
 
 
 # Setup environment for tests
@@ -144,28 +130,7 @@ def test_completions(mock_client):
     mock_client.completions.create.assert_called_once()
 
 
-@patch("app.client")
-def test_embeddings(mock_client):
-    """Test embeddings endpoint"""
-    # Mock the OpenAI client response
-    mock_response = MagicMock()
-    mock_response.model_dump.return_value = MOCK_EMBEDDINGS_RESPONSE
-    mock_client.embeddings.create.return_value = mock_response
-    
-    # Make request to endpoint
-    response = client.post(
-        "/v1/embeddings",
-        json={
-            "model": "text-embedding-ada-002",
-            "input": "Hello"
-        }
-    )
-    
-    # Assertions
-    assert response.status_code == 200
-    
-    # Verify OpenAI client was called
-    mock_client.embeddings.create.assert_called_once()
+# Embeddings endpoint test removed (not supported)
 
 
 # Error handling tests
