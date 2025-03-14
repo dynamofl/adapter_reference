@@ -66,19 +66,14 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: StarletteRequest, call_next):
         start_time = time.time()
         
-        # Generate request ID
         request_id = secrets.token_hex(8)
         
-        # Log request
         logger.info(f"Request {request_id} started: {request.method} {request.url.path}")
         
-        # Process request
         response = await call_next(request)
         
-        # Calculate processing time
         process_time = time.time() - start_time
         
-        # Log response
         logger.info(f"Request {request_id} completed: {response.status_code} in {process_time:.4f}s")
         
         return response
@@ -231,8 +226,6 @@ async def root():
         "health": "/health"
     }
 
-# Models endpoint is not supported
-
 # Chat completions endpoint
 @app.post("/v1/chat/completions")
 async def chat_completions(
@@ -318,8 +311,6 @@ async def stream_chat_completions(request: ChatCompletionRequest):
         error_json = json.dumps(error_details)
         yield f"data: {error_json}\n\n"
 
-# Embeddings endpoint is not supported
-
 # Completions endpoint
 @app.post("/v1/completions")
 async def completions(
@@ -392,8 +383,6 @@ async def stream_completions(request: CompletionRequest):
         logger.error(f"Error in streaming completions: {str(e)}")
         error_json = json.dumps(error_details)
         yield f"data: {error_json}\n\n"
-
-# Images API is not supported
 
 # Metrics endpoint for monitoring
 @app.get("/metrics", dependencies=[Depends(get_api_key)])
