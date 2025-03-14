@@ -240,40 +240,55 @@ def generate_cache_key(model: str, params: Dict[str, Any]) -> str:
     return f"{model}:{json.dumps(cache_params, sort_keys=True)}"
 
 # Utils for sanitizing errors
-def sanitize_error_message(error: Exception) -> Dict[str, Any]:
-    """Sanitize error messages to avoid exposing sensitive information"""
+def get_error_details_and_status(error: Exception) -> tuple[Dict[str, Any], int]:
+    """
+    Process an exception and return appropriate error details and HTTP status code.
+    
+    Args:
+        error: The exception that occurred
+        
+    Returns:
+        tuple: (error_details, http_status_code)
+    """
     if isinstance(error, APIError):
-        # Return structured API error
+        # Check if there's a status code in the error
+        status_code = getattr(error, "status_code", 500)
         return {
             "error": error.__class__.__name__,
             "detail": "OpenAI API error occurred",
             "code": getattr(error, "code", "unknown_error")
-        }
+        }, status_code
     elif isinstance(error, RateLimitError):
         return {
             "error": "RateLimitError",
             "detail": "OpenAI API rate limit exceeded",
             "code": "rate_limit_exceeded"
-        }
+        }, status.HTTP_429_TOO_MANY_REQUESTS
     elif isinstance(error, AuthenticationError):
         return {
             "error": "AuthenticationError",
             "detail": "Authentication with OpenAI API failed",
             "code": "authentication_failed"
-        }
+        }, status.HTTP_401_UNAUTHORIZED
     elif isinstance(error, ValidationError):
         return {
             "error": "ValidationError",
             "detail": str(error),
             "code": "validation_error"
-        }
+        }, status.HTTP_422_UNPROCESSABLE_ENTITY
     else:
         # Generic error without details
         return {
             "error": "ServerError",
             "detail": "An unexpected error occurred",
             "code": "internal_server_error"
-        }
+        }, status.HTTP_500_INTERNAL_SERVER_ERROR
+
+# Kept for backwards compatibility
+def sanitize_error_message(error: Exception) -> Dict[str, Any]:
+    """Sanitize error messages to avoid exposing sensitive information"""
+    error_details, _ = get_error_details_and_status(error)
+    return error_details
 
 # Health check endpoint
 @app.get("/health")
@@ -303,10 +318,10 @@ async def list_models(api_key: str = Depends(get_api_key)):
         response = client.models.list()
         return response
     except Exception as e:
-        error_details = sanitize_error_message(e)
+        error_details, status_code = get_error_details_and_status(e)
         logger.error(f"Error listing models: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status_code,
             detail=error_details
         )
 
@@ -366,10 +381,10 @@ async def chat_completions(
         return response
     
     except Exception as e:
-        error_details = sanitize_error_message(e)
+        error_details, status_code = get_error_details_and_status(e)
         logger.error(f"Error in chat completions: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status_code,
             detail=error_details
         )
 
@@ -411,7 +426,7 @@ async def stream_chat_completions(request: ChatCompletionRequest):
         yield "data: [DONE]\n\n"
     
     except Exception as e:
-        error_details = sanitize_error_message(e)
+        error_details, _ = get_error_details_and_status(e)
         logger.error(f"Error in streaming chat completions: {str(e)}")
         error_json = json.dumps(error_details)
         yield f"data: {error_json}\n\n"
@@ -447,10 +462,10 @@ async def embeddings(
         return response
     
     except Exception as e:
-        error_details = sanitize_error_message(e)
+        error_details, status_code = get_error_details_and_status(e)
         logger.error(f"Error in embeddings: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status_code,
             detail=error_details
         )
 
@@ -504,10 +519,10 @@ async def completions(
         return response
     
     except Exception as e:
-        error_details = sanitize_error_message(e)
+        error_details, status_code = get_error_details_and_status(e)
         logger.error(f"Error in completions: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status_code,
             detail=error_details
         )
 
@@ -536,7 +551,7 @@ async def stream_completions(request: CompletionRequest):
         yield "data: [DONE]\n\n"
     
     except Exception as e:
-        error_details = sanitize_error_message(e)
+        error_details, _ = get_error_details_and_status(e)
         logger.error(f"Error in streaming completions: {str(e)}")
         error_json = json.dumps(error_details)
         yield f"data: {error_json}\n\n"
@@ -583,10 +598,10 @@ async def create_image(
         return response
     
     except Exception as e:
-        error_details = sanitize_error_message(e)
+        error_details, status_code = get_error_details_and_status(e)
         logger.error(f"Error in image generation: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status_code,
             detail=error_details
         )
 
@@ -652,11 +667,11 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
-    """Handle generic exceptions and sanitize error messages"""
+    """Handle generic exceptions with appropriate status codes"""
     logger.exception("Unhandled exception occurred", exc_info=exc)
-    error_details = sanitize_error_message(exc)
+    error_details, status_code = get_error_details_and_status(exc)
     return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        status_code=status_code,
         content=error_details
     )
 
