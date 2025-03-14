@@ -1,10 +1,10 @@
-# OpenAI Text Generation Adapter
+# OpenAI Adapter
 
-A focused API proxy service for OpenAI that provides improved authentication, error handling, and request validation for text generation endpoints.
+An API proxy service for OpenAI that provides authentication, error handling, and request validation for chat completions endpoints.
 
 ## Features
 
-- **Focused API**: Supports only the core text generation endpoints
+- **Focused API**: Supports only the core completions endpoints
 - **Authentication**: Optional API key authentication for securing your proxy
 - **Request Validation**: Validates all requests before sending to OpenAI
 - **Improved Error Handling**: Returns appropriate HTTP status codes and sanitized error messages
@@ -30,8 +30,8 @@ Note: Other OpenAI endpoints like embeddings, image generation, and model listin
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/your-username/openai-adapter.git
-cd openai-adapter
+git clone https://github.com/dynamofl/adapter_reference.git
+cd adapter_reference
 ```
 
 2. Create a virtual environment and install dependencies:
@@ -141,19 +141,3 @@ Run the test suite:
 ```bash
 pytest
 ```
-
-## Why This Adapter?
-
-This adapter focuses exclusively on text generation functionality to provide several benefits:
-
-1. **Simplicity**: Easier to understand, maintain, and debug
-2. **Focused Security**: Security features tailored for text generation use cases
-3. **Better Validation**: Thorough validation of input parameters
-4. **Improved Error Handling**: Clear, actionable error messages with proper HTTP status codes
-5. **Streaming Support**: Full support for streaming responses with proper error handling
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-
