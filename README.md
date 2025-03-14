@@ -1,21 +1,24 @@
 # OpenAI Adapter
 
-An API proxy service for OpenAI that provides authentication, error handling, and request validation for chat completions endpoints.
+A flexible API proxy service for OpenAI and other AI providers. This adapter provides authentication, error handling, request validation, and allows you to use OpenAI-compatible clients with other AI services.
 
 ## Features
 
 - **Focused API**: Supports only the core completions endpoints
 - **Authentication**: Optional API key authentication for securing your proxy
-- **Request Validation**: Validates all requests before sending to OpenAI
+- **Request Validation**: Validates all requests before sending to the AI provider
 - **Improved Error Handling**: Returns appropriate HTTP status codes and sanitized error messages
+- **Model Restrictions**: Optionally restrict which models can be used
+- **Custom Base URL**: Connect to different OpenAI-compatible endpoints
 - **Metrics**: Built-in metrics endpoint for monitoring
 - **Streaming Support**: Fully supports streaming responses for chat and completions
 - **Health Check**: Built-in health check endpoint for monitoring
+- **Extensibility**: Example adapters for other AI providers (Anthropic, Mistral)
 
 ## Supported Endpoints
 
 - `/v1/chat/completions` - Chat completions API
-- `/v1/completions` - Text completions API
+- `/v1/completions` - Text completions API (legacy)
 
 Note: Other OpenAI endpoints like embeddings, image generation, and model listing are not supported in this focused adapter.
 
@@ -24,7 +27,7 @@ Note: Other OpenAI endpoints like embeddings, image generation, and model listin
 ### Prerequisites
 
 - Python 3.11 or higher
-- An OpenAI API key
+- An OpenAI API key (or API key for another provider if using an adapter)
 
 ### Installation
 
@@ -48,7 +51,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-4. Edit the `.env` file and add your OpenAI API key:
+4. Edit the `.env` file and add your API key:
 ```
 OPENAI_API_KEY=your_openai_api_key_here
 ```
@@ -74,9 +77,11 @@ The following environment variables can be used to configure the adapter:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `OPENAI_API_KEY` | Your OpenAI API key (required) | - |
+| `OPENAI_BASE_URL` | Custom base URL for OpenAI API | `https://api.openai.com/v1` |
 | `ENABLE_AUTH` | Enable API key authentication | `false` |
 | `API_KEY_SECRET` | API key for authentication when enabled | Random generated |
 | `PORT` | Port to run the server on | `8000` |
+| `ALLOWED_MODELS` | Comma-separated list of allowed models | All models allowed |
 
 ## Using the API
 
@@ -128,6 +133,77 @@ completion_response = client.completions.create(
 )
 print(completion_response.choices[0].text)
 ```
+
+## Creating Custom Adapters
+
+The adapter is designed to be extended to work with different AI providers. Check the `examples/` directory for adapter examples:
+
+### Anthropic Claude Adapter
+
+This adapter allows you to use the OpenAI client with Anthropic's Claude models.
+
+1. Install the Anthropic Python SDK:
+```bash
+pip install anthropic
+```
+
+2. Add your Anthropic API key to `.env`:
+```
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+```
+
+3. Run the adapter:
+```bash
+python examples/anthropic_adapter.py
+```
+
+Now you can use the OpenAI client with Claude models:
+
+```python
+import openai
+
+client = openai.OpenAI(
+    base_url="http://localhost:8000/v1",
+)
+
+# This will actually use Claude even though you specify an OpenAI model name
+response = client.chat.completions.create(
+    model="gpt-4",  # Will be mapped to claude-3-opus-20240229
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Explain quantum computing in simple terms."}
+    ]
+)
+print(response.choices[0].message.content)
+```
+
+### Mistral AI Adapter
+
+This adapter allows you to use the OpenAI client with Mistral's models.
+
+1. Install the Mistral Python SDK:
+```bash
+pip install mistralai
+```
+
+2. Add your Mistral API key to `.env`:
+```
+MISTRAL_API_KEY=your_mistral_api_key_here
+```
+
+3. Run the adapter:
+```bash
+python examples/mistral_adapter.py
+```
+
+### Creating Your Own Adapter
+
+To create your own adapter:
+
+1. Copy one of the example adapters as a starting point
+2. Update the configuration to connect to your API provider
+3. Create mappings between OpenAI request format and your provider's format
+4. Implement the endpoints needed for your use case
 
 ## Health and Monitoring
 

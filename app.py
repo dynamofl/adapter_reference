@@ -1,3 +1,10 @@
+"""
+OpenAI API Proxy Service
+
+This service provides a focused adapter for OpenAI's chat and completion APIs.
+It handles authentication, error handling, request validation, and metrics.
+"""
+
 import os
 import json
 import time
@@ -16,10 +23,9 @@ import uvicorn
 import logging
 import secrets
 from datetime import datetime
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Import configuration from config.py
+from config import config
 
 # Configure logging
 logging.basicConfig(
@@ -27,14 +33,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 logger = logging.getLogger(__name__)
-
-# Environment variables
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in your .env file.")
-
-API_KEY_SECRET = os.getenv("API_KEY_SECRET", secrets.token_urlsafe(32))
-ENABLE_AUTH = os.getenv("ENABLE_AUTH", "false").lower() == "true"
 
 # Initialize FastAPI
 app = FastAPI(
@@ -59,7 +57,16 @@ api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 # Initialize OpenAI client
 def get_openai_client():
-    return OpenAI(api_key=OPENAI_API_KEY)
+    """
+    Create an OpenAI client using the configured API key and base URL.
+    
+    This allows for connecting to different OpenAI-compatible endpoints
+    by configuring the OPENAI_BASE_URL environment variable.
+    """
+    return OpenAI(
+        api_key=config.openai_api_key,
+        base_url=config.openai_base_url
+    )
 
 # Middleware for request logging
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
@@ -85,10 +92,25 @@ app.add_middleware(RequestLoggingMiddleware)
 async def get_api_key(
     api_key: str = Depends(api_key_header)
 ) -> str:
-    if not ENABLE_AUTH:
+    """
+    Validate the API key provided in the request.
+    
+    This function is used as a dependency for protected endpoints.
+    If authentication is disabled, it allows all requests through.
+    
+    Args:
+        api_key: The API key from the X-API-Key header
+        
+    Returns:
+        The validated API key
+        
+    Raises:
+        HTTPException: If authentication is enabled and the API key is invalid
+    """
+    if not config.enable_auth:
         return None
     
-    if api_key is None or api_key != API_KEY_SECRET:
+    if api_key is None or api_key != config.api_key_secret:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid API Key",
@@ -233,8 +255,24 @@ async def chat_completions(
     api_key: str = Depends(get_api_key),
     x_request_id: Optional[str] = Header(None)
 ):
-    """Create a chat completion with the OpenAI API"""
+    """
+    Create a chat completion with the OpenAI API.
+    
+    This endpoint proxies requests to OpenAI's chat completions API,
+    with additional validation, error handling, and model restrictions.
+    """
     try:
+        # Check if the requested model is allowed
+        if config.allowed_models and request.model not in config.allowed_models:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "ModelNotAllowedError",
+                    "detail": f"Model '{request.model}' is not allowed. Allowed models: {', '.join(config.allowed_models)}",
+                    "code": "model_not_allowed"
+                }
+            )
+        
         # Handle streaming responses
         if request.stream:
             return StreamingResponse(
@@ -276,8 +314,24 @@ async def chat_completions(
         )
 
 async def stream_chat_completions(request: ChatCompletionRequest):
-    """Stream chat completions from the OpenAI API"""
+    """
+    Stream chat completions from the OpenAI API.
+    
+    This function handles streaming responses, allowing for real-time
+    updates as the completion is generated.
+    """
     try:
+        # Check if the requested model is allowed
+        if config.allowed_models and request.model not in config.allowed_models:
+            error_details = {
+                "error": "ModelNotAllowedError",
+                "detail": f"Model '{request.model}' is not allowed. Allowed models: {', '.join(config.allowed_models)}",
+                "code": "model_not_allowed"
+            }
+            error_json = json.dumps(error_details)
+            yield f"data: {error_json}\n\n"
+            return
+            
         messages = [
             {
                 "role": msg.role,
@@ -318,8 +372,24 @@ async def completions(
     api_key: str = Depends(get_api_key),
     x_request_id: Optional[str] = Header(None)
 ):
-    """Create completions with the OpenAI API"""
+    """
+    Create completions with the OpenAI API.
+    
+    This endpoint supports both the legacy completions API
+    and provides the same validation and error handling as the chat endpoint.
+    """
     try:
+        # Check if the requested model is allowed
+        if config.allowed_models and request.model not in config.allowed_models:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "ModelNotAllowedError",
+                    "detail": f"Model '{request.model}' is not allowed. Allowed models: {', '.join(config.allowed_models)}",
+                    "code": "model_not_allowed"
+                }
+            )
+            
         # Handle streaming responses
         if request.stream:
             return StreamingResponse(
@@ -355,8 +425,24 @@ async def completions(
         )
 
 async def stream_completions(request: CompletionRequest):
-    """Stream completions from the OpenAI API"""
+    """
+    Stream completions from the OpenAI API.
+    
+    This function handles streaming for the legacy completions endpoint,
+    with the same validation and error handling as the chat endpoint.
+    """
     try:
+        # Check if the requested model is allowed
+        if config.allowed_models and request.model not in config.allowed_models:
+            error_details = {
+                "error": "ModelNotAllowedError",
+                "detail": f"Model '{request.model}' is not allowed. Allowed models: {', '.join(config.allowed_models)}",
+                "code": "model_not_allowed"
+            }
+            error_json = json.dumps(error_details)
+            yield f"data: {error_json}\n\n"
+            return
+            
         response = client.completions.create(
             model=request.model,
             prompt=request.prompt,
@@ -453,13 +539,25 @@ async def general_exception_handler(request: Request, exc: Exception):
 async def startup_event():
     """Initialize resources on application startup"""
     logger.info("Starting OpenAI API Proxy")
-    logger.info(f"Authentication enabled: {ENABLE_AUTH}")
+    logger.info(f"Authentication enabled: {config.enable_auth}")
+    
+    # Log configuration information
+    if config.allowed_models:
+        logger.info(f"Allowed models: {', '.join(config.allowed_models)}")
+    else:
+        logger.info("All models are allowed")
+        
+    logger.info(f"Using OpenAI base URL: {config.openai_base_url}")
     
     # Verify OpenAI API key on startup
     try:
         test_client = get_openai_client()
         models = test_client.models.list()
         logger.info(f"Successfully connected to OpenAI API. {len(models.data)} models available.")
+        
+        # Log available models for reference
+        model_names = [model.id for model in models.data]
+        logger.info(f"Available models: {', '.join(model_names[:10])}{'...' if len(model_names) > 10 else ''}")
     except Exception as e:
         logger.error(f"Failed to connect to OpenAI API: {str(e)}")
         # Continue startup even if OpenAI connection fails
@@ -470,11 +568,10 @@ async def shutdown_event():
     logger.info("Shutting down OpenAI API Proxy")
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))
     uvicorn.run(
         "app:app", 
         host="0.0.0.0", 
-        port=port, 
+        port=config.port, 
         reload=True,
         log_level="info"
     )
