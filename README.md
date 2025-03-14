@@ -13,7 +13,7 @@ A reference implementation for building OpenAI API-compatible services. This ada
 - **Metrics**: Built-in metrics endpoint for monitoring
 - **Streaming Support**: Fully supports streaming responses for chat and completions
 - **Health Check**: Built-in health check endpoint for monitoring
-- **Extensibility**: Example adapters for other AI providers (Anthropic, Mistral)
+- **Extensibility**: Example adapters for other AI providers
 
 ## Supported Endpoints
 
