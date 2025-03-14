@@ -218,16 +218,24 @@ if __name__ == "__main__":
     # Create client
     client = get_custom_openai_client()
     
-    # Example chat completion with standard model
-    chat_response = client.chat.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "user", "content": "Hello, how are you?"}
-        ]
-    )
-    print("Standard model response:", chat_response.choices[0].message.content)
+    print("\n=== Custom Client Implementation Example ===\n")
     
-    # Example chat completion with enterprise model
+    # Example chat completion with standard model
+    print("This example demonstrates a custom OpenAI client implementation.")
+    print("For standard models, it would typically pass through to the OpenAI API.")
+    print("For enterprise models, it demonstrates custom routing logic.")
+    print("\nNote: This example doesn't require a valid API key to demonstrate the custom routing.\n")
+    
+    try:
+        # Skip actual API call since we're just demonstrating
+        print("[Simulating standard API call (would require valid API key)]")
+        print("Standard model requests would be routed to OpenAI API.")
+    except Exception as e:
+        print(f"[Error with standard model: {str(e)}]")
+    
+    # Example chat completion with enterprise model (custom routing)
+    print("\n=== Custom Routing Example ===\n")
+    print("Routing request to enterprise-custom-model...")
     enterprise_response = client.chat.create(
         model="enterprise-custom-model",
         messages=[
@@ -235,3 +243,5 @@ if __name__ == "__main__":
         ]
     )
     print("Enterprise model response:", enterprise_response.choices[0].message.content)
+    print("\nThis demonstrates how you can implement custom routing logic based on model name.")
+    print("The enterprise- prefix triggers our custom logic instead of calling the OpenAI API.")
