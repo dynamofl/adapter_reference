@@ -195,7 +195,38 @@ The examples directory contains a custom client implementation to demonstrate ho
 
 ## Testing
 
-Run the test suite:
+### Running End-to-End Tests
+
+The repository includes end-to-end tests that validate the API functionality against a running instance of the adapter. 
+
+To run the end-to-end tests:
+
+1. Make sure the adapter is running:
+```bash
+# In one terminal window
+python app.py
+```
+
+2. Run the tests in another terminal:
+```bash
+# Run basic tests
+python -m tests.e2e_tests
+
+# Run with verbose output (shows full API responses)
+python -m tests.e2e_tests --verbose
+
+# Test against a different URL
+python -m tests.e2e_tests --base-url http://your-server:8000
+
+# Test with authentication (if enabled)
+python -m tests.e2e_tests --api-key your_api_key
+```
+
+The tests verify all API endpoints, authentication, validation, and error handling to ensure the adapter works correctly.
+
+### Running Unit Tests
+
+For unit tests:
 
 ```bash
 pytest
