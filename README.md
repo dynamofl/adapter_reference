@@ -185,7 +185,7 @@ def get_openai_client():
 4. **Response Filtering**: Apply content filtering or modification to responses
 5. **Logging & Analytics**: Add detailed logging for compliance or usage tracking
 
-The examples directory contains adapter implementations for different AI providers to demonstrate how to maintain the OpenAI API interface while using different backends.
+The examples directory contains a custom client implementation to demonstrate how to maintain the OpenAI API interface while implementing your own authentication and routing logic.
 
 ## Health and Monitoring
 

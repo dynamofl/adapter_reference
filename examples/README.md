@@ -2,9 +2,7 @@
 
 This directory contains examples showing how to extend or customize the OpenAI API reference implementation for different use cases.
 
-## Available Examples
-
-### Custom Client Implementation
+## Custom Client Implementation
 
 The `custom_client_example.py` file demonstrates how to create a custom OpenAI client implementation that maintains the same interface as the standard OpenAI client but adds custom functionality:
 
@@ -14,14 +12,6 @@ The `custom_client_example.py` file demonstrates how to create a custom OpenAI c
 - Custom logging and analytics
 
 This example shows how to replace the standard OpenAI client with your own implementation while maintaining API compatibility.
-
-### Anthropic Claude Adapter
-
-The `anthropic_adapter.py` example demonstrates how to create an OpenAI-compatible API that uses Anthropic's Claude models behind the scenes. This allows you to use OpenAI client libraries to interact with Claude.
-
-### Mistral AI Adapter
-
-The `mistral_adapter.py` example shows how to create an adapter for Mistral's API, allowing you to use the OpenAI client with Mistral models.
 
 ## Creating Your Own Client Implementation
 
