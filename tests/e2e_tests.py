@@ -5,12 +5,34 @@ End-to-end tests for the OpenAI adapter.
 This script tests the actual running API service by making real requests to the endpoints.
 It validates both successful responses and error handling for various scenarios.
 
+These tests verify:
+1. Basic endpoints (/health, /, /metrics)
+2. Chat completions endpoint with various parameters
+3. Completions endpoint with various parameters
+4. Streaming support for both endpoints
+5. Validation error handling
+6. Verification that unsupported endpoints return 404
+
 Usage:
-    python -m tests.e2e_tests [--base-url BASE_URL] [--api-key API_KEY]
+    python -m tests.e2e_tests [--base-url BASE_URL] [--api-key API_KEY] [--verbose]
 
 Options:
     --base-url BASE_URL    Base URL of the API (default: http://localhost:8000)
     --api-key API_KEY      API key for authentication if ENABLE_AUTH is true
+    --verbose, -v          Show verbose output including full API responses
+
+Examples:
+    # Run basic tests against local server
+    python -m tests.e2e_tests
+    
+    # Run tests with full response output
+    python -m tests.e2e_tests --verbose
+    
+    # Test against a deployed server
+    python -m tests.e2e_tests --base-url https://your-server.com
+    
+    # Test with authentication
+    python -m tests.e2e_tests --api-key your_api_key_here
 """
 
 import argparse
@@ -586,7 +608,18 @@ def test_unsupported_endpoints():
 
 
 def main():
-    """Main function to run all tests"""
+    """
+    Main function to run all tests against the API.
+    
+    This function handles:
+    1. Parsing command-line arguments
+    2. Running all test cases in sequence
+    3. Handling connection errors gracefully
+    4. Providing a summary of test results
+    
+    The tests will validate the API functionality including both success cases
+    and error handling. Any test failures will be clearly indicated.
+    """
     global args
     args = parse_args()
     
